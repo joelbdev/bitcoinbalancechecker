@@ -8,6 +8,7 @@ import os
 import time
 from datetime import datetime
 
+
 def main(entry, radio_var):
     '''Entry point to the program, calls the functions and updates the labels to show progress'''
 
@@ -167,7 +168,3 @@ label2 = tk.Label(root)
 label2.grid(row=2,column=0)
 
 root.mainloop()
-
-
-
-
