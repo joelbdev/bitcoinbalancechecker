@@ -12,30 +12,38 @@ from datetime import datetime
 def main(entry, radio_var):
     '''Entry point to the program, calls the functions and updates the labels to show progress'''
 
-    input_path = entry
+    if entry.endswith('/'):
+        input_path = entry
+    else:
+        input_path = entry + '/'
     radio_selection = radio_var.get()
 
     if not radio_selection: #if user doesn't select a coin, default to bitcoin
-        radio_selection = "bitcoin"
+        radio_selection = "BTC"
     balances_path = balancesfile(input_path)
     addresses = openfile(input_path)
-    querylist = loop(addresses, balances_path) #TODO: Why do I need this here?
+    querylist = loop(addresses, balances_path) 
 
     dict = query(radio_selection, querylist, balances_path)
     #save the final csv will all balances
-    final_df = pd.DataFrame.from_dict(dict, orient='index')
-    label2.configure(text=f'Finished getting balances, results file has been saved here: \n {balances_path}')
-    label2.update()
-    final_df.to_csv(balances_path, mode='a')
-    csv_write(balances_path)
+    
+    csv_write(balances_path, dict, radio_selection)
     
 
-def csv_write(balances_path):
-    csv = pd.read_csv(balances_path)
-    csv.columns = ['Addresses', 'Balance']
-    csv['Balance'] = csv['Balance'].str.replace(r'BTC', '').astype(float)
-    csv.loc['Total']= csv.sum(numeric_only=True, axis=0)
-    csv.to_csv(balances_path, index=False)
+def csv_write(balances_path, dict, radio_selection):
+    """
+    Write the final csv file with all the balances and total the balances
+    Input: Path to allbalances file, dict containing addresses and balances and what coin balance the program is querying
+    Return: nil
+    """
+    final_df = pd.DataFrame.from_dict(dict, orient='index')
+    final_df.columns = ['Balance']
+    label2.configure(text=f'Finished getting balances, results file has been saved here: \n {balances_path}')
+    label2.update()
+
+    final_df['Balance'] = final_df['Balance'].str.replace(radio_selection, '').astype(float) 
+    final_df.loc['Total']= final_df.sum(numeric_only=True, axis=0)
+    final_df.to_csv(balances_path, mode='a')
 
 def query(radio_selection, querylist, balances_path):
     '''
@@ -45,13 +53,17 @@ def query(radio_selection, querylist, balances_path):
     '''
     querylist = set(querylist) #convert to a set to remove any duplicates
 
-    if radio_selection == 'bitcoin':
+    if radio_selection == 'BTC':
         requesturl = 'https://www.blockchain.com/btc/address/'
-    elif radio_selection == 'bitcoin_cash':
+        ticker = 'BTC'
+    elif radio_selection == 'BCH':
         requesturl = 'https://www.blockchain.com/bch/address/'
-    elif radio_selection == 'ethereum':
+        ticker = 'BCH'
+    elif radio_selection == 'ETH':
         requesturl = 'https://www.blockchain.com/eth/address/'
-    # elif radio_selection == 'litecoin':
+        ticker = 'ETH'
+    # elif radio_selection == 'litecoin':    print(final_df.head())
+
     #     requesturl = #TODO: add litecoin
 
     try:
@@ -66,7 +78,7 @@ def query(radio_selection, querylist, balances_path):
                 content = response.content
                 soup = BeautifulSoup(content, 'html.parser')
                 balanceline = soup.find_all(class_=("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[2]
-                balance = balanceline.find_all(text=re.compile("BTC")) #TODO: Needs to change for different coins
+                balance = balanceline.find_all(text=re.compile(ticker)) 
                 dict[address] = balance
                 # time.sleep(1) #15 definately works
                 label2.configure(text=f'Querying address: \n{address}')
@@ -74,7 +86,7 @@ def query(radio_selection, querylist, balances_path):
             else:
                 #skip anything that isn't a cryptocurrency address e.g. CSV headers
                 continue
-        return dict
+        
     except:
         time.sleep(20)
         label2.configure(text='Blockchain.com blocking requests: waiting 20 seconds to continue')
@@ -84,7 +96,8 @@ def query(radio_selection, querylist, balances_path):
             label.configure(text=f'{str(len(querylist))} addresses left to query')
             label.update()
             query(radio_selection, querylist, balances_path)
-        return dict
+    
+    return dict
 
 def loop(addresses, balances_path):
     '''
@@ -110,7 +123,7 @@ def openfile(input_path):
     addresses = []
     for files in os.listdir(input_path):
         if files.endswith('.csv') and not files.startswith('allbalances'):
-            with open(files, 'r') as read_obj:
+            with open(f'{input_path}{files}', 'r') as read_obj:
                 csv_reader = reader(read_obj)
                 for row in csv_reader:
                     addresses.append(row) #ignore the header
@@ -156,11 +169,11 @@ button.grid(row=1, column=3, pady=5)
 select_coin_label = tk.Label(root, text="Select a coin", font='Helvetica 12 bold')
 select_coin_label.grid(row=2, column=3)
 
-bitcoin_radio_button = tk.Radiobutton(root, text="Bitcoin", value="bitcoin", variable = radio_var)
+bitcoin_radio_button = tk.Radiobutton(root, text="Bitcoin", value="BTC", variable = radio_var)
 bitcoin_radio_button.grid(row=3,column=3)
-bitcoin_cash_radio_button = tk.Radiobutton(root, text="Bitcoin Cash", value="bitcoin_cash", variable = radio_var)
+bitcoin_cash_radio_button = tk.Radiobutton(root, text="Bitcoin Cash", value="BCH", variable = radio_var)
 bitcoin_cash_radio_button.grid(row=4, column=3)
-ethereum_radio_button = tk.Radiobutton(root, text="Ethreum", value="ethereum", variable = radio_var)
+ethereum_radio_button = tk.Radiobutton(root, text="Ethreum", value="ETH", variable = radio_var)
 ethereum_radio_button.grid(row=5, column=3)
 
 label = tk.Label(root)
