@@ -19,7 +19,7 @@ def main(entry, radio_var):
         radio_selection = "bitcoin"
     balances_path = balancesfile(input_path)
     addresses = openfile(input_path)
-    querylist = loop(addresses, balances_path)
+    querylist = loop(addresses, balances_path) #TODO: Why do I need this here?
 
     dict = query(radio_selection, querylist, balances_path)
     #save the final csv will all balances
@@ -66,23 +66,24 @@ def query(radio_selection, querylist, balances_path):
                 content = response.content
                 soup = BeautifulSoup(content, 'html.parser')
                 balanceline = soup.find_all(class_=("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[2]
-                balance = balanceline.find_all(text=re.compile("BTC"))
+                balance = balanceline.find_all(text=re.compile("BTC")) #TODO: Needs to change for different coins
                 dict[address] = balance
                 # time.sleep(1) #15 definately works
                 label2.configure(text=f'Querying address: \n{address}')
                 label2.update()
             else:
+                #skip anything that isn't a cryptocurrency address e.g. CSV headers
                 continue
         return dict
     except:
         time.sleep(20)
         label2.configure(text='Blockchain.com blocking requests: waiting 20 seconds to continue')
         label2.update()
-        while not querylist: #list is empty
+        while not querylist: #Keep going until list is empty
             querylist = loop(querylist, balances_path)
             label.configure(text=f'{str(len(querylist))} addresses left to query')
             label.update()
-            query(querylist, balances_path)
+            query(radio_selection, querylist, balances_path)
         return dict
 
 def loop(addresses, balances_path):
