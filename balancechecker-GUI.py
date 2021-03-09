@@ -7,9 +7,10 @@ from csv import reader
 import os
 import time
 from datetime import datetime
+import random
 
 
-def main(entry, radio_var):
+def main(entry, radio_var, headers_list):
     '''Entry point to the program, calls the functions and updates the labels to show progress'''
 
     if entry.endswith('/'):
@@ -24,7 +25,7 @@ def main(entry, radio_var):
     addresses = openfile(input_path)
     querylist = loop(addresses, balances_path) 
 
-    dict = query(radio_selection, querylist, balances_path)
+    dict = query(radio_selection, querylist, balances_path, headers_list)
     #save the final csv will all balances
     
     csv_write(balances_path, dict, radio_selection)
@@ -45,7 +46,7 @@ def csv_write(balances_path, dict, radio_selection):
     final_df.loc['Total']= final_df.sum(numeric_only=True, axis=0)
     final_df.to_csv(balances_path, mode='a')
 
-def query(radio_selection, querylist, balances_path):
+def query(radio_selection, querylist, balances_path, headers_list):
     '''
     Query blockchain.com with the btc address and scrape the balance. If a list is provided, will loop over the list until all addresses queried (even if query limited)
     Input: a btc address or list of btc addresses
@@ -65,19 +66,22 @@ def query(radio_selection, querylist, balances_path):
 
     #     requesturl = #TODO: add litecoin
 
+
+
     try:
         dict = {}
-        print(requesturl)
         label.configure(text=f'Started: Querying {str(len(querylist))} addresses')
         label.update()
         for address in querylist:
+            time.sleep(1)
             if address.startswith('bc1') or address.startswith('1') or address.startswith('3') or address.startswith('q') or address.startswith('0x'): #only read in valid BTC addresses #TODO: has to change for different coins
                 requestlink = requesturl + address
-                print(requestlink)
+                headers = random.choice(headers_list)
+                r.headers = headers
                 response = r.get(requestlink, timeout=25)
                 content = response.content
                 soup = BeautifulSoup(content, 'html.parser')
-                balanceline = soup.find_all(class_=("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[2]
+                balanceline = soup.find_all(class_= ("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[2]
                 balance = balanceline.find_all(text=re.compile(ticker)) 
                 dict[address] = balance
                 # time.sleep(1) #15 definately works
@@ -97,7 +101,7 @@ def query(radio_selection, querylist, balances_path):
             querylist = loop(querylist, balances_path)
             label.configure(text=f'{str(len(querylist))} addresses left to query')
             label.update()
-            query(radio_selection, querylist, balances_path)
+            query(radio_selection, querylist, balances_path, headers_list)
     return dict
 
 def loop(addresses, balances_path):
@@ -148,6 +152,59 @@ def balancesfile(input_path):
 
 #Entry point is the GUI
 
+headers_list = [
+    # Firefox 77 Mac
+     {
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:77.0) Gecko/20100101 Firefox/77.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://www.google.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    },
+    # Firefox 77 Windows
+    {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:77.0) Gecko/20100101 Firefox/77.0",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://www.google.com/",
+        "DNT": "1",
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1"
+    },
+    # Chrome 83 Mac
+    {
+        "Connection": "keep-alive",
+        "DNT": "1",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Sec-Fetch-Site": "none",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-Dest": "document",
+        "Referer": "https://www.google.com/",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8"
+    },
+    # Chrome 83 Windows 
+    {
+        "Connection": "keep-alive",
+        "Upgrade-Insecure-Requests": "1",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/83.0.4103.97 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9",
+        "Sec-Fetch-Site": "same-origin",
+        "Sec-Fetch-Mode": "navigate",
+        "Sec-Fetch-User": "?1",
+        "Sec-Fetch-Dest": "document",
+        "Referer": "https://www.google.com/",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Accept-Language": "en-US,en;q=0.9"
+    }
+]
+
+
 root = tk.Tk()
 root.title('Balance checker')
 radio_var = tk.StringVar()
@@ -164,7 +221,7 @@ label1.grid(sticky=tk.W)
 entry = tk.Entry(root, width=45)
 entry.grid(row=1, column=0, sticky=tk.N+tk.S, pady=5)
 
-button = tk.Button(root, text = 'Get balance', command=lambda: main(entry.get(), radio_var))
+button = tk.Button(root, text = 'Get balance', command=lambda: main(entry.get(), radio_var, headers_list))
 button.grid(row=1, column=3, pady=5)
 
 select_coin_label = tk.Label(root, text="Select a coin", font='Helvetica 12 bold')
