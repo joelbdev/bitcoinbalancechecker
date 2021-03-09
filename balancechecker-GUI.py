@@ -52,7 +52,6 @@ def query(radio_selection, querylist, balances_path):
     Return: A dictionary containing the btc address and its current balance
     '''
     querylist = set(querylist) #convert to a set to remove any duplicates
-
     if radio_selection == 'BTC':
         requesturl = 'https://www.blockchain.com/btc/address/'
         ticker = 'BTC'
@@ -68,12 +67,13 @@ def query(radio_selection, querylist, balances_path):
 
     try:
         dict = {}
-        
+        print(requesturl)
         label.configure(text=f'Started: Querying {str(len(querylist))} addresses')
         label.update()
         for address in querylist:
             if address.startswith('bc1') or address.startswith('1') or address.startswith('3') or address.startswith('q') or address.startswith('0x'): #only read in valid BTC addresses #TODO: has to change for different coins
                 requestlink = requesturl + address
+                print(requestlink)
                 response = r.get(requestlink, timeout=25)
                 content = response.content
                 soup = BeautifulSoup(content, 'html.parser')
@@ -83,20 +83,21 @@ def query(radio_selection, querylist, balances_path):
                 # time.sleep(1) #15 definately works
                 label2.configure(text=f'Querying address: \n{address}')
                 label2.update()
+        
             else:
                 #skip anything that isn't a cryptocurrency address e.g. CSV headers
                 continue
         
-    except:
+    except r.exceptions.RequestException as e:
         time.sleep(20)
         label2.configure(text='Blockchain.com blocking requests: waiting 20 seconds to continue')
+        print(e)
         label2.update()
         while not querylist: #Keep going until list is empty
             querylist = loop(querylist, balances_path)
             label.configure(text=f'{str(len(querylist))} addresses left to query')
             label.update()
             query(radio_selection, querylist, balances_path)
-    
     return dict
 
 def loop(addresses, balances_path):
