@@ -81,7 +81,7 @@ def query(radio_selection, querylist, balances_path, headers_list):
                 response = r.get(requestlink, timeout=25)
                 content = response.content
                 soup = BeautifulSoup(content, 'html.parser')
-                balanceline = soup.find_all(class_= ("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[2]
+                balanceline = soup.find_all(class_= ("sc-1ryi78w-0 cILyoi sc-16b9dsl-1 ZwupP u3ufsr-0 eQTRKC"))[5]
                 balance = balanceline.find_all(text=re.compile(ticker)) 
                 dict[address] = balance
                 # time.sleep(1) #15 definately works
